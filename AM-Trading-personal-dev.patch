@@ -1,0 +1,290 @@
+Only in FinceptTerminal-personal-dev: PERSONAL_DEVELOPMENT_CHANGES.md
+diff -ru FinceptTerminal-main/fincept-qt/src/app/MainWindow.cpp FinceptTerminal-personal-dev/fincept-qt/src/app/MainWindow.cpp
+--- FinceptTerminal-main/fincept-qt/src/app/MainWindow.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/app/MainWindow.cpp	2026-04-30 22:32:29.685324033 +0000
+@@ -106,7 +106,7 @@
+ MainWindow::MainWindow(int window_id, QWidget* parent) : QMainWindow(parent), window_id_(window_id) {
+     // Show active profile in title bar when using a non-default profile
+     const QString profile = ProfileManager::instance().active();
+-    setWindowTitle(profile == "default" ? "Fincept Terminal" : QString("Fincept Terminal [%1]").arg(profile));
++    setWindowTitle(profile == "default" ? "AM-Trading" : QString("AM-Trading [%1]").arg(profile));
+     // Load icon from the embedded Windows resource (IDI_ICON1 in app.rc).
+     // Falls back to the .ico beside the executable on other platforms.
+     QIcon app_icon;
+diff -ru FinceptTerminal-main/fincept-qt/src/app/main.cpp FinceptTerminal-personal-dev/fincept-qt/src/app/main.cpp
+--- FinceptTerminal-main/fincept-qt/src/app/main.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/app/main.cpp	2026-04-30 22:32:29.748176707 +0000
+@@ -83,7 +83,7 @@
+     const QString profile_key = QString("FinceptTerminal-%1").arg(fincept::ProfileManager::instance().active());
+     SingleApplication app(argc, argv, /*allowSecondary=*/true, SingleApplication::Mode::User, 100,
+                           profile_key.toUtf8());
+-    app.setApplicationName("FinceptTerminal");
++    app.setApplicationName("AM-Trading");
+     app.setOrganizationName("Fincept");
+ #ifndef FINCEPT_VERSION_STRING
+ #    define FINCEPT_VERSION_STRING "0.0.0-dev"
+@@ -226,7 +226,7 @@
+                 log.set_tag_level(tag, lvl_map.value(level));
+         }
+     }
+-    LOG_INFO("App", "Fincept Terminal v4.0.2 starting...");
++    LOG_INFO("App", "AM-Trading personal build starting...");
+ 
+     // Theme is applied after DB is open so saved font/theme are respected from the start.
+ 
+@@ -392,7 +392,7 @@
+         // (e.g. user somehow triggers it twice before the window is hidden).
+         auto* setup_screen = new fincept::screens::SetupScreen;
+         QPointer<fincept::screens::SetupScreen> screen_guard(setup_screen);
+-        setup_screen->setWindowTitle("Fincept Terminal — First-Time Setup");
++        setup_screen->setWindowTitle("AM-Trading — First-Time Setup");
+         setup_screen->resize(800, 600);
+         setup_screen->show();
+ 
+diff -ru FinceptTerminal-main/fincept-qt/src/screens/notes/NotesScreen.cpp FinceptTerminal-personal-dev/fincept-qt/src/screens/notes/NotesScreen.cpp
+--- FinceptTerminal-main/fincept-qt/src/screens/notes/NotesScreen.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/screens/notes/NotesScreen.cpp	2026-04-30 22:33:03.257469271 +0000
+@@ -5,6 +5,7 @@
+ #include "services/file_manager/FileManagerService.h"
+ #include "ui/theme/Theme.h"
+ 
++#include <QDate>
+ #include <QDateTime>
+ #include <QFile>
+ #include <QFileDialog>
+@@ -96,10 +97,19 @@
+     QString label;
+ };
+ static const QVector<Category> kCategories = {
+-    {"ALL", "ALL NOTES"},       {"TRADE_IDEA", "TRADE IDEAS"},
+-    {"RESEARCH", "RESEARCH"},   {"MARKET_ANALYSIS", "MARKET ANALYSIS"},
+-    {"EARNINGS", "EARNINGS"},   {"ECONOMIC", "ECONOMIC"},
+-    {"PORTFOLIO", "PORTFOLIO"}, {"GENERAL", "GENERAL"},
++    {"ALL", "ALL NOTES"},
++    {"TRADING_JOURNAL", "TRADING JOURNAL"},
++    {"DAILY_PLAN", "DAILY PLAN"},
++    {"TRADE_REVIEW", "TRADE REVIEW"},
++    {"RISK", "RISK NOTES"},
++    {"LESSONS", "LESSONS"},
++    {"TRADE_IDEA", "TRADE IDEAS"},
++    {"RESEARCH", "RESEARCH"},
++    {"MARKET_ANALYSIS", "MARKET ANALYSIS"},
++    {"EARNINGS", "EARNINGS"},
++    {"ECONOMIC", "ECONOMIC"},
++    {"PORTFOLIO", "PORTFOLIO"},
++    {"GENERAL", "GENERAL"},
+ };
+ 
+ static const QStringList kPriorities = {"HIGH", "MEDIUM", "LOW"};
+@@ -220,6 +230,20 @@
+     connect(new_btn, &QPushButton::clicked, this, &NotesScreen::on_new_note);
+     tl->addWidget(new_btn);
+ 
++    auto* trade_btn = new QPushButton("+ TRADE");
++    trade_btn->setFixedSize(82, 24);
++    trade_btn->setStyleSheet(kSecondaryBtn());
++    trade_btn->setToolTip("Create a pre-filled trading journal entry");
++    connect(trade_btn, &QPushButton::clicked, this, &NotesScreen::on_new_trade_journal);
++    tl->addWidget(trade_btn);
++
++    auto* plan_btn = new QPushButton("+ PLAN");
++    plan_btn->setFixedSize(76, 24);
++    plan_btn->setStyleSheet(kSecondaryBtn());
++    plan_btn->setToolTip("Create a pre-filled daily trading plan");
++    connect(plan_btn, &QPushButton::clicked, this, &NotesScreen::on_new_daily_plan);
++    tl->addWidget(plan_btn);
++
+     lay->addWidget(toolbar);
+ 
+     // Notes list
+@@ -523,6 +547,67 @@
+     right_stack_->setCurrentIndex(2);
+ }
+ 
++void NotesScreen::on_new_trade_journal() {
++    const QString today = QDate::currentDate().toString("yyyy-MM-dd");
++    populate_template_note(
++        QString("Trade Journal - %1").arg(today),
++        "TRADING_JOURNAL",
++        "HIGH",
++        "NEUTRAL",
++        "journal, trade, risk",
++        "# Trade Journal\n\n"
++        "## Setup\n"
++        "- Symbol:\n"
++        "- Direction: Long / Short\n"
++        "- Timeframe:\n"
++        "- Entry reason:\n"
++        "- Market context:\n\n"
++        "## Risk Plan\n"
++        "- Entry price:\n"
++        "- Stop loss:\n"
++        "- Target 1:\n"
++        "- Target 2:\n"
++        "- Position size:\n"
++        "- Max risk amount:\n\n"
++        "## Execution\n"
++        "- Entry time:\n"
++        "- Exit time:\n"
++        "- Result: Win / Loss / Break-even\n"
++        "- P&L:\n\n"
++        "## Review\n"
++        "- Did I follow the plan?\n"
++        "- Mistakes:\n"
++        "- Lesson:\n");
++}
++
++void NotesScreen::on_new_daily_plan() {
++    const QString today = QDate::currentDate().toString("yyyy-MM-dd");
++    populate_template_note(
++        QString("Daily Trading Plan - %1").arg(today),
++        "DAILY_PLAN",
++        "MEDIUM",
++        "NEUTRAL",
++        "daily-plan, watchlist, risk",
++        "# Daily Trading Plan\n\n"
++        "## Market Bias\n"
++        "- Overall market direction:\n"
++        "- Key news/events today:\n"
++        "- Important levels:\n\n"
++        "## Watchlist\n"
++        "- Symbol 1:\n"
++        "- Symbol 2:\n"
++        "- Symbol 3:\n\n"
++        "## Risk Rules\n"
++        "- Max trades today:\n"
++        "- Max daily loss:\n"
++        "- Risk per trade:\n"
++        "- Stop trading condition:\n\n"
++        "## End-of-Day Review\n"
++        "- Best trade:\n"
++        "- Worst trade:\n"
++        "- What to improve tomorrow:\n");
++}
++
+ void NotesScreen::on_save_note() {
+     QString title = edit_title_->text().trimmed();
+     if (title.isEmpty()) {
+@@ -678,6 +763,26 @@
+     edit_tickers_->clear();
+ }
+ 
++void NotesScreen::populate_template_note(const QString& title, const QString& category, const QString& priority,
++                                         const QString& sentiment, const QString& tags, const QString& content) {
++    selected_note_id_ = -1;
++    clear_editor();
++    edit_title_->setText(title);
++    edit_content_->setPlainText(content);
++
++    const int cat_idx = edit_category_->findData(category);
++    if (cat_idx >= 0)
++        edit_category_->setCurrentIndex(cat_idx);
++
++    edit_priority_->setCurrentText(priority);
++    edit_sentiment_->setCurrentText(sentiment);
++    edit_tags_->setText(tags);
++    edit_tickers_->clear();
++
++    is_editing_ = true;
++    right_stack_->setCurrentIndex(2);
++}
++
+ void NotesScreen::enter_edit_mode() {
+     is_editing_ = true;
+     // Find the note and populate editor
+diff -ru FinceptTerminal-main/fincept-qt/src/screens/notes/NotesScreen.h FinceptTerminal-personal-dev/fincept-qt/src/screens/notes/NotesScreen.h
+--- FinceptTerminal-main/fincept-qt/src/screens/notes/NotesScreen.h	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/screens/notes/NotesScreen.h	2026-04-30 22:31:10.992206296 +0000
+@@ -29,6 +29,8 @@
+     void on_category_selected(int row);
+     void on_note_selected(int row);
+     void on_new_note();
++    void on_new_trade_journal();
++    void on_new_daily_plan();
+     void on_save_note();
+     void on_delete_note();
+     void on_toggle_favorite();
+@@ -45,6 +47,8 @@
+     void update_notes_list();
+     void show_note(const fincept::FinancialNote& note);
+     void clear_editor();
++    void populate_template_note(const QString& title, const QString& category, const QString& priority,
++                                const QString& sentiment, const QString& tags, const QString& content);
+     void enter_edit_mode();
+     void enter_view_mode();
+ 
+diff -ru FinceptTerminal-main/fincept-qt/src/screens/setup/SetupScreen.cpp FinceptTerminal-personal-dev/fincept-qt/src/screens/setup/SetupScreen.cpp
+--- FinceptTerminal-main/fincept-qt/src/screens/setup/SetupScreen.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/screens/setup/SetupScreen.cpp	2026-04-30 22:32:29.748765033 +0000
+@@ -61,7 +61,7 @@
+     cl->setSpacing(8);
+ 
+     // ── Title block ───────────────────────────────────────────────────────────
+-    auto* title = new QLabel("FINCEPT TERMINAL", center);
++    auto* title = new QLabel("AM-TRADING", center);
+     title->setAlignment(Qt::AlignCenter);
+     title->setStyleSheet(QString("color:%1; font-family:%2; font-size:24px; font-weight:700; letter-spacing:3px;")
+                              .arg(kAccent, fonts::DATA_FAMILY));
+@@ -326,7 +326,7 @@
+ void SetupScreen::on_setup_done(bool success, const QString& error) {
+     if (success) {
+         LOG_INFO("SetupScreen", "Python setup completed — all steps done");
+-        status_label_->setText("Everything is ready! Launching Fincept Terminal...");
++        status_label_->setText("Everything is ready! Launching AM-Trading...");
+         status_label_->setStyleSheet(
+             QString("color:%1; font-family:%2; font-size:10px; margin-top:6px;").arg(colors::GREEN(), fonts::DATA_FAMILY));
+         begin_btn_->setText("LAUNCH");
+diff -ru FinceptTerminal-main/fincept-qt/src/screens/watchlist/WatchlistScreen.cpp FinceptTerminal-personal-dev/fincept-qt/src/screens/watchlist/WatchlistScreen.cpp
+--- FinceptTerminal-main/fincept-qt/src/screens/watchlist/WatchlistScreen.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/screens/watchlist/WatchlistScreen.cpp	2026-04-30 22:32:00.062081500 +0000
+@@ -351,7 +351,7 @@
+     // Ensure at least one default watchlist exists
+     if (watchlists_.isEmpty()) {
+         QColor acc(colors::AMBER());
+-        auto cr = fincept::WatchlistRepository::instance().create("Default", acc.name());
++        auto cr = fincept::WatchlistRepository::instance().create("Personal Watchlist", acc.name());
+         if (cr.is_ok()) {
+             watchlists_.append(cr.value());
+             // Add some starter symbols
+@@ -364,6 +364,8 @@
+             repo.add_stock(watchlists_.first().id, "TSLA", "Tesla Inc");
+             repo.add_stock(watchlists_.first().id, "META", "Meta Platforms");
+             repo.add_stock(watchlists_.first().id, "JPM", "JPMorgan Chase");
++            repo.add_stock(watchlists_.first().id, "SPY", "SPDR S&P 500 ETF");
++            repo.add_stock(watchlists_.first().id, "QQQ", "Invesco QQQ ETF");
+         }
+     }
+ 
+diff -ru FinceptTerminal-main/fincept-qt/src/ui/navigation/FKeyBar.cpp FinceptTerminal-personal-dev/fincept-qt/src/ui/navigation/FKeyBar.cpp
+--- FinceptTerminal-main/fincept-qt/src/ui/navigation/FKeyBar.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/ui/navigation/FKeyBar.cpp	2026-04-30 22:31:10.991691795 +0000
+@@ -18,10 +18,11 @@
+     tab_layout_->setSpacing(2);
+ 
+     QVector<TabDef> tabs = {
+-        {"dashboard", "DASHBOARD"}, {"markets", "MARKETS"},   {"crypto_trading", "CRYPTO"},  {"portfolio", "PORTFOLIO"},
+-        {"news", "NEWS"},           {"ai_chat", "AI CHAT"},   {"backtesting", "BACKTEST"},   {"algo_trading", "ALGO"},
+-        {"node_editor", "NODES"},   {"code_editor", "CODE"},  {"ai_quant_lab", "QUANT LAB"}, {"quantlib", "QUANTLIB"},
+-        {"forum", "FORUM"},         {"settings", "SETTINGS"}, {"profile", "PROFILE"},
++        {"dashboard", "DASHBOARD"}, {"markets", "MARKETS"},     {"watchlist", "WATCHLIST"},
++        {"portfolio", "PORTFOLIO"}, {"notes", "JOURNAL"},       {"news", "NEWS"},
++        {"crypto_trading", "CRYPTO"}, {"ai_chat", "AI CHAT"},   {"backtesting", "BACKTEST"},
++        {"algo_trading", "ALGO"},   {"ai_quant_lab", "QUANT LAB"}, {"settings", "SETTINGS"},
++        {"profile", "PROFILE"},
+     };
+     for (const auto& def : tabs)
+         add_tab(def);
+diff -ru FinceptTerminal-main/fincept-qt/src/ui/navigation/NavigationBar.cpp FinceptTerminal-personal-dev/fincept-qt/src/ui/navigation/NavigationBar.cpp
+--- FinceptTerminal-main/fincept-qt/src/ui/navigation/NavigationBar.cpp	2026-04-18 21:54:06.000000000 +0000
++++ FinceptTerminal-personal-dev/fincept-qt/src/ui/navigation/NavigationBar.cpp	2026-04-30 22:32:29.747334228 +0000
+@@ -22,8 +22,8 @@
+         return l;
+     };
+ 
+-    hl->addWidget(mk("FINCEPT", "navBrand"));
+-    hl->addWidget(mk("TERMINAL", "navTitle"));
++    hl->addWidget(mk("AM", "navBrand"));
++    hl->addWidget(mk("TRADING DESK", "navTitle"));
+     hl->addWidget(mk("   ", "navSpacer"));
+     hl->addWidget(mk("\xe2\x97\x8f", "navLiveDot"));
+     hl->addWidget(mk(" LIVE", "navLive"));
