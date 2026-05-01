@@ -1,0 +1,83 @@
+name: Build AM-Trading Windows
+
+on:
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: "6.8.3"
+  QT_MODULES: "qtcharts qtwebsockets qtmultimedia"
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6.8.3
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Install OpenSSL
+        shell: bash
+        run: |
+          VCPKG_ROOT="${VCPKG_INSTALLATION_ROOT:-C:/vcpkg}"
+          "$VCPKG_ROOT/vcpkg" install openssl:x64-windows --no-print-usage
+          echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/x64-windows" >> "$GITHUB_ENV"
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: FinceptTerminal-personal-dev/fincept-qt
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
+            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
+
+      - name: Build
+        shell: bash
+        working-directory: FinceptTerminal-personal-dev/fincept-qt
+        run: |
+          cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 2
+
+      - name: Package Windows app
+        shell: pwsh
+        working-directory: FinceptTerminal-personal-dev/fincept-qt
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          if (Test-Path "build\Release\FinceptTerminal.exe") {
+            Copy-Item "build\Release\FinceptTerminal.exe" "dist\" -Force
+          } elseif (Test-Path "build\FinceptTerminal.exe") {
+            Copy-Item "build\FinceptTerminal.exe" "dist\" -Force
+          } else {
+            Get-ChildItem build -Recurse -Filter "*.exe"
+            throw "FinceptTerminal.exe not found"
+          }
+
+          & "$env:QT_ROOT_DIR\bin\windeployqt.exe" `
+            --release `
+            --no-translations `
+            --compiler-runtime `
+            --force `
+            "dist\FinceptTerminal.exe"
+
+          if (Test-Path "resources") {
+            Copy-Item "resources" "dist\resources" -Recurse -Force
+          }
+
+          if (Test-Path "scripts") {
+            Copy-Item "scripts" "dist\scripts" -Recurse -Force
+          }
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: AM-Trading-Windows-x64
+          path: FinceptTerminal-personal-dev/fincept-qt/dist
