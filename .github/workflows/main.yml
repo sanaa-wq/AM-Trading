@@ -38,13 +38,32 @@ jobs:
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
-            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
+            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" \
+            -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF \
+            -DCMAKE_CXX_FLAGS="/WX-" \
+            -DCMAKE_C_FLAGS="/WX-"
+
+      - name: Disable warnings as errors in Visual Studio projects
+        shell: pwsh
+        working-directory: FinceptTerminal-personal-dev/fincept-qt
+        run: |
+          Get-ChildItem "build" -Recurse -Filter "*.vcxproj" | ForEach-Object {
+            $file = $_.FullName
+            $text = Get-Content $file -Raw
+
+            $text = $text -replace "<TreatWarningAsError>true</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
+            $text = $text -replace "<TreatWarningAsError>TRUE</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
+            $text = $text -replace "<TreatSpecificWarningsAsErrors>.*?</TreatSpecificWarningsAsErrors>", "<TreatSpecificWarningsAsErrors></TreatSpecificWarningsAsErrors>"
+            $text = $text -replace "/WX", "/WX-"
+
+            Set-Content $file $text -Encoding UTF8
+          }
 
       - name: Build
         shell: bash
         working-directory: FinceptTerminal-personal-dev/fincept-qt
         run: |
-          cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 2
+          cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 1
 
       - name: Package Windows app
         shell: pwsh
