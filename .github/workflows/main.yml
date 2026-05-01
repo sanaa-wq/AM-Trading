@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Qt 6.8.3
         uses: jurplel/install-qt-action@v4
@@ -79,15 +79,46 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
 
-          if (Test-Path "build\Release\FinceptTerminal.exe") {
-            Copy-Item "build\Release\FinceptTerminal.exe" "dist\" -Force
-          } elseif (Test-Path "build\FinceptTerminal.exe") {
-            Copy-Item "build\FinceptTerminal.exe" "dist\" -Force
-          } else {
+          # 1) Find and copy the main executable
+          $exe = Get-ChildItem "build" -Recurse -Filter "FinceptTerminal.exe" |
+            Where-Object { $_.FullName -match "\\Release\\" } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            $exe = Get-ChildItem "build" -Recurse -Filter "FinceptTerminal.exe" | Select-Object -First 1
+          }
+
+          if (-not $exe) {
             Get-ChildItem build -Recurse -Filter "*.exe"
             throw "FinceptTerminal.exe not found"
           }
 
+          Copy-Item $exe.FullName "dist\" -Force
+
+          # 2) Copy project-built DLLs, especially qgeoview.dll
+          $projectDlls = Get-ChildItem "build" -Recurse -Filter "*.dll" |
+            Where-Object {
+              $_.FullName -match "\\Release\\" -or
+              $_.Name -ieq "qgeoview.dll"
+            }
+
+          foreach ($dll in $projectDlls) {
+            Copy-Item $dll.FullName "dist\" -Force
+          }
+
+          # 3) Fail early if qgeoview.dll was not packaged
+          if (-not (Test-Path "dist\qgeoview.dll")) {
+            Write-Host "DLL files found in build directory:"
+            Get-ChildItem "build" -Recurse -Filter "*.dll" | Select-Object FullName
+            throw "qgeoview.dll was not found in the build output. The app will not run without it."
+          }
+
+          # 4) Copy OpenSSL runtime DLLs from vcpkg
+          if (Test-Path "$env:OPENSSL_ROOT_DIR\bin") {
+            Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" "dist\" -Force
+          }
+
+          # 5) Deploy Qt runtime dependencies
           & "$env:QT_ROOT_DIR\bin\windeployqt.exe" `
             --release `
             --no-translations `
@@ -95,6 +126,7 @@ jobs:
             --force `
             "dist\FinceptTerminal.exe"
 
+          # 6) Copy application resources
           if (Test-Path "resources") {
             Copy-Item "resources" "dist\resources" -Recurse -Force
           }
@@ -103,8 +135,12 @@ jobs:
             Copy-Item "scripts" "dist\scripts" -Recurse -Force
           }
 
+          # 7) Print final package contents for debugging
+          Write-Host "Final dist contents:"
+          Get-ChildItem "dist" | Sort-Object Name | Select-Object Name, Length
+
       - name: Upload Windows build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: AM-Trading-Windows-x64
           path: FinceptTerminal-personal-dev/fincept-qt/dist
