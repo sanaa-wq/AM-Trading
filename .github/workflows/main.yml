@@ -25,25 +25,32 @@ jobs:
           cache: true
 
       - name: Install OpenSSL
-        shell: bash
+        shell: pwsh
         run: |
-          VCPKG_ROOT="${VCPKG_INSTALLATION_ROOT:-C:/vcpkg}"
-          "$VCPKG_ROOT/vcpkg" install openssl:x64-windows --no-print-usage
-          echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/x64-windows" >> "$GITHUB_ENV"
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+
+          & "$vcpkgRoot\vcpkg.exe" install openssl:x64-windows --no-print-usage
+
+          "OPENSSL_ROOT_DIR=$vcpkgRoot\installed\x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Configure CMake
-        shell: bash
+        shell: pwsh
         working-directory: FinceptTerminal-personal-dev/fincept-qt
         run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
-            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" \
-            -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF \
-            -DCMAKE_CXX_FLAGS="/WX-" \
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
+            -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR" `
+            -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF `
+            -DCMAKE_CXX_FLAGS="/WX-" `
             -DCMAKE_C_FLAGS="/WX-"
 
-      - name: Disable warnings as errors in Visual Studio projects
+      - name: Force disable warnings as errors
         shell: pwsh
         working-directory: FinceptTerminal-personal-dev/fincept-qt
         run: |
@@ -52,15 +59,16 @@ jobs:
             $text = Get-Content $file -Raw
 
             $text = $text -replace "<TreatWarningAsError>true</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
+            $text = $text -replace "<TreatWarningAsError>True</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
             $text = $text -replace "<TreatWarningAsError>TRUE</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
             $text = $text -replace "<TreatSpecificWarningsAsErrors>.*?</TreatSpecificWarningsAsErrors>", "<TreatSpecificWarningsAsErrors></TreatSpecificWarningsAsErrors>"
-            $text = $text -replace "/WX", "/WX-"
+            $text = $text -replace "/WX(?!-)", "/WX-"
 
             Set-Content $file $text -Encoding UTF8
           }
 
       - name: Build
-        shell: bash
+        shell: pwsh
         working-directory: FinceptTerminal-personal-dev/fincept-qt
         run: |
           cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 1
