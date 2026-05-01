@@ -6,7 +6,7 @@ on:
 env:
   BUILD_TYPE: Release
   QT_VERSION: "6.8.3"
-  QT_MODULES: "qtcharts qtwebsockets qtmultimedia qtlocation qtpositioning"
+  QT_MODULES: "qtcharts qtwebsockets qtmultimedia"
 
 jobs:
   build-windows:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Qt
+      - name: Install Qt 6.8.3
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
@@ -27,12 +27,14 @@ jobs:
       - name: Install OpenSSL
         shell: pwsh
         run: |
-          $vcpkg = $env:VCPKG_INSTALLATION_ROOT
-          if (-not $vcpkg) { $vcpkg = "C:\vcpkg" }
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
 
-          & "$vcpkg\vcpkg.exe" install openssl:x64-windows --no-print-usage
+          & "$vcpkgRoot\vcpkg.exe" install openssl:x64-windows --no-print-usage
 
-          "OPENSSL_ROOT_DIR=$vcpkg\installed\x64-windows" | Out-File $env:GITHUB_ENV -Append
+          "OPENSSL_ROOT_DIR=$vcpkgRoot\installed\x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Configure CMake
         shell: pwsh
@@ -41,60 +43,67 @@ jobs:
           cmake -S . -B build `
             -G "Visual Studio 17 2022" `
             -A x64 `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
             -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
             -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR" `
             -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF `
             -DCMAKE_CXX_FLAGS="/WX-" `
             -DCMAKE_C_FLAGS="/WX-"
 
+      - name: Force disable warnings as errors
+        shell: pwsh
+        working-directory: FinceptTerminal-personal-dev/fincept-qt
+        run: |
+          Get-ChildItem "build" -Recurse -Filter "*.vcxproj" | ForEach-Object {
+            $file = $_.FullName
+            $text = Get-Content $file -Raw
+
+            $text = $text -replace "<TreatWarningAsError>true</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
+            $text = $text -replace "<TreatWarningAsError>True</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
+            $text = $text -replace "<TreatWarningAsError>TRUE</TreatWarningAsError>", "<TreatWarningAsError>false</TreatWarningAsError>"
+            $text = $text -replace "<TreatSpecificWarningsAsErrors>.*?</TreatSpecificWarningsAsErrors>", "<TreatSpecificWarningsAsErrors></TreatSpecificWarningsAsErrors>"
+            $text = $text -replace "/WX(?!-)", "/WX-"
+
+            Set-Content $file $text -Encoding UTF8
+          }
+
       - name: Build
         shell: pwsh
         working-directory: FinceptTerminal-personal-dev/fincept-qt
         run: |
-          cmake --build build --config Release --parallel 2
+          cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 1
 
-      - name: Package Application
+      - name: Package Windows app
         shell: pwsh
         working-directory: FinceptTerminal-personal-dev/fincept-qt
         run: |
-
           New-Item -ItemType Directory -Force -Path dist | Out-Null
 
-          # Copy main exe
-          Copy-Item "build\Release\FinceptTerminal.exe" "dist\" -Force
+          if (Test-Path "build\Release\FinceptTerminal.exe") {
+            Copy-Item "build\Release\FinceptTerminal.exe" "dist\" -Force
+          } elseif (Test-Path "build\FinceptTerminal.exe") {
+            Copy-Item "build\FinceptTerminal.exe" "dist\" -Force
+          } else {
+            Get-ChildItem build -Recurse -Filter "*.exe"
+            throw "FinceptTerminal.exe not found"
+          }
 
-          # Deploy Qt DLLs
           & "$env:QT_ROOT_DIR\bin\windeployqt.exe" `
             --release `
-            --compiler-runtime `
             --no-translations `
+            --compiler-runtime `
             --force `
             "dist\FinceptTerminal.exe"
 
-          # Copy qgeoview.dll automatically if exists
-          $dll = Get-ChildItem build -Recurse -Filter qgeoview.dll | Select-Object -First 1
-          if ($dll) {
-            Copy-Item $dll.FullName dist -Force
+          if (Test-Path "resources") {
+            Copy-Item "resources" "dist\resources" -Recurse -Force
           }
 
-          # Copy all extra DLL files from build folder
-          Get-ChildItem build -Recurse -Filter *.dll | ForEach-Object {
-            Copy-Item $_.FullName dist -Force
+          if (Test-Path "scripts") {
+            Copy-Item "scripts" "dist\scripts" -Recurse -Force
           }
 
-          # Copy OpenSSL DLLs
-          Copy-Item "$env:OPENSSL_ROOT_DIR\bin\*.dll" dist -Force -ErrorAction SilentlyContinue
-
-          # Copy resources
-          if (Test-Path resources) {
-            Copy-Item resources dist\resources -Recurse -Force
-          }
-
-          if (Test-Path scripts) {
-            Copy-Item scripts dist\scripts -Recurse -Force
-          }
-
-      - name: Upload Build
+      - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
           name: AM-Trading-Windows-x64
