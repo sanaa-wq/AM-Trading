@@ -1,3 +1,5 @@
+#include <QMessageBox>
+#include <QStringList>
 #include "ai_chat/LlmService.h"
 #include "app/MainWindow.h"
 #include "auth/AuthManager.h"
@@ -89,6 +91,29 @@ int main(int argc, char* argv[]) {
 #    define FINCEPT_VERSION_STRING "0.0.0-dev"
 #endif
     app.setApplicationVersion(QStringLiteral(FINCEPT_VERSION_STRING));
+
+    const QStringList args = app.arguments();
+
+    if (args.contains("--reset-pin") || args.contains("--clear-pin")) {
+        if (app.isSecondary()) {
+            QMessageBox::warning(
+                nullptr,
+                "AM-Trading",
+                "AM-Trading is already running.\nClose the app before using --reset-pin."
+            );
+            return 2;
+        }
+
+        fincept::auth::PinManager::instance().clear_pin();
+
+        QMessageBox::information(
+            nullptr,
+            "AM-Trading",
+            "PIN data cleared successfully.\nStart AM-Trading normally to create a new 6-digit PIN."
+        );
+
+        return 0;
+    }
 
     // ── Secondary instance: signal primary to open a new window, then exit ───
     // The primary receives receivedMessage() and calls open_new_window().
