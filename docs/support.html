@@ -1,0 +1,243 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الدعم وحلول التشغيل | AM-Trading</title>
+  <meta name="description" content="صفحة الدعم الفني وحلول تشغيل AM-Trading: مشاكل DLL، إعداد أول تشغيل، PIN، التحميل، GitHub Pages، ومتطلبات النظام." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav container">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">AM</span>
+        <span>AM-Trading</span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Open navigation">☰</button>
+
+      <div class="nav-links" id="navLinks">
+        <a href="index.html#features">المميزات</a>
+        <a href="index.html#download">التحميل</a>
+        <a href="index.html#research">Research Lab</a>
+        <a href="index.html#pricing">الخطط</a>
+        <a href="support.html">الدعم</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="support-hero">
+      <div class="container">
+        <span class="eyebrow">Support Center</span>
+        <h1>الدعم الفني وحلول التشغيل</h1>
+        <p>
+          هذه الصفحة تجمع أهم الحلول العملية لتشغيل AM-Trading على Windows،
+          ومعالجة مشاكل التثبيت، القفل، تحميل النسخة، وفتح الموقع.
+        </p>
+
+        <div class="support-quick">
+          <a href="#dll">qgeoview.dll</a>
+          <a href="#setup">First-Time Setup</a>
+          <a href="#pin">PIN</a>
+          <a href="#download-help">التحميل</a>
+          <a href="#pages">GitHub Pages</a>
+          <a href="#diagnostics">أوامر التشخيص</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section container support-layout">
+      <aside class="support-sidebar">
+        <h3>فهرس الدعم</h3>
+        <a href="#requirements">متطلبات التشغيل</a>
+        <a href="#download-help">تحميل نسخة Windows</a>
+        <a href="#dll">حل qgeoview.dll</a>
+        <a href="#setup">إعداد أول تشغيل</a>
+        <a href="#pin">إعادة ضبط PIN</a>
+        <a href="#pages">الموقع لا يفتح</a>
+        <a href="#diagnostics">أوامر تشخيص</a>
+      </aside>
+
+      <div class="support-content">
+        <article id="requirements" class="support-article">
+          <h2>1. متطلبات التشغيل</h2>
+          <p>قبل تشغيل AM-Trading تأكد من توفر المتطلبات الأساسية التالية:</p>
+
+          <ul>
+            <li>Windows 10 أو Windows 11.</li>
+            <li>اتصال إنترنت عند أول تشغيل.</li>
+            <li>مساحة كافية لتثبيت بيئة Python والمكتبات التحليلية.</li>
+            <li>تشغيل البرنامج كمستخدم عادي، وليس بالضرورة كمسؤول.</li>
+            <li>عدم حذف ملفات DLL الموجودة بجانب FinceptTerminal.exe.</li>
+          </ul>
+        </article>
+
+        <article id="download-help" class="support-article">
+          <h2>2. تحميل نسخة Windows من GitHub Actions</h2>
+          <p>
+            عند بناء نسخة Windows من GitHub Actions، يتم إنتاج ملف Artifact باسم قريب من:
+          </p>
+
+          <pre><code>AM-Trading-Windows-x64.zip</code></pre>
+
+          <p>طريقة التحميل:</p>
+
+          <ol>
+            <li>افتح مستودع المشروع في GitHub.</li>
+            <li>ادخل إلى تبويب Actions.</li>
+            <li>افتح آخر Build ناجح.</li>
+            <li>انزل إلى قسم Artifacts.</li>
+            <li>حمّل AM-Trading-Windows-x64.</li>
+            <li>فك الضغط في مجلد مستقل مثل F:\Trading\AM-Trading-Windows-x64.</li>
+          </ol>
+        </article>
+
+        <article id="dll" class="support-article">
+          <h2>3. حل مشكلة qgeoview.dll</h2>
+          <p>إذا ظهرت رسالة مثل:</p>
+
+          <pre><code>The code execution cannot proceed because qgeoview.dll was not found.</code></pre>
+
+          <p>فهذا يعني أن حزمة Windows ناقصة مكتبة تشغيل مهمة. الحل:</p>
+
+          <ul>
+            <li>تأكد أن الملف qgeoview.dll موجود بجانب FinceptTerminal.exe.</li>
+            <li>لا تضع DLL داخل System32.</li>
+            <li>لا تحمّل DLL من مواقع عشوائية.</li>
+            <li>أعد بناء البرنامج من GitHub Actions بعد التأكد من خطوة packaging.</li>
+          </ul>
+
+          <p>بعد الإصلاح، يجب أن يحتوي مجلد التشغيل على:</p>
+
+          <pre><code>FinceptTerminal.exe
+qgeoview.dll
+Qt6Core.dll
+Qt6Gui.dll
+Qt6Widgets.dll
+Qt6Charts.dll</code></pre>
+        </article>
+
+        <article id="setup" class="support-article">
+          <h2>4. First-Time Setup بطيء أو متوقف</h2>
+          <p>
+            عند أول تشغيل يقوم البرنامج بتثبيت Python Runtime، وإنشاء بيئات معزولة،
+            وتثبيت مكتبات التداول والتحليل. هذه الخطوة قد تكون بطيئة.
+          </p>
+
+          <p>إذا بقي على Installing لفترة طويلة، افحص العمليات:</p>
+
+          <pre><code>Get-Process python,pip,FinceptTerminal -ErrorAction SilentlyContinue |
+  Select-Object Name,CPU,WorkingSet,StartTime</code></pre>
+
+          <p>وافحص ملفات السجل:</p>
+
+          <pre><code>Get-ChildItem "$env:LOCALAPPDATA\com.fincept.terminal" -Recurse -Include *.log,*.txt -ErrorAction SilentlyContinue |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 10 FullName,LastWriteTime,Length</code></pre>
+        </article>
+
+        <article id="pin" class="support-article">
+          <h2>5. إعادة ضبط PIN</h2>
+          <p>
+            إذا نسيت PIN أو ظهر قفل مؤقت بسبب محاولات خاطئة، يمكن تصفير بيانات PIN من Windows Credential Manager.
+          </p>
+
+          <p>أغلق البرنامج أولًا:</p>
+
+          <pre><code>Get-Process FinceptTerminal -ErrorAction SilentlyContinue | Stop-Process -Force</code></pre>
+
+          <p>ثم احذف مفاتيح PIN فقط:</p>
+
+          <pre><code>cmdkey /delete:FinceptTerminal/pin_hash
+cmdkey /delete:FinceptTerminal/pin_salt
+cmdkey /delete:FinceptTerminal/pin_failed_attempts
+cmdkey /delete:FinceptTerminal/pin_lockout_until
+cmdkey /delete:FinceptTerminal/pin_lockout_stamp</code></pre>
+
+          <p>تحقق أن المتبقي فقط هو api_key:</p>
+
+          <pre><code>cmdkey /list | findstr /i FinceptTerminal</code></pre>
+
+          <p>إذا ظهر فقط:</p>
+
+          <pre><code>Target: LegacyGeneric:target=FinceptTerminal/api_key</code></pre>
+
+          <p>فهذا جيد. شغّل البرنامج وسيطلب إنشاء PIN جديد.</p>
+        </article>
+
+        <article id="pages" class="support-article">
+          <h2>6. موقع GitHub Pages لا يفتح على الكمبيوتر</h2>
+          <p>
+            إذا كان الموقع يعمل على الجوال مع VPN ولا يعمل على الكمبيوتر، فالمشكلة غالبًا من الشبكة أو DNS،
+            وليست من الموقع.
+          </p>
+
+          <p>اختبر الاتصال:</p>
+
+          <pre><code>nslookup sanaa-wq.github.io
+curl.exe -I "https://sanaa-wq.github.io/AM-Trading/"
+Test-NetConnection sanaa-wq.github.io -Port 443</code></pre>
+
+          <p>إذا فشل الاتصال على المنفذ 443، جرّب:</p>
+
+          <ul>
+            <li>تشغيل VPN على الكمبيوتر.</li>
+            <li>استخدام Cloudflare WARP.</li>
+            <li>تغيير DNS إلى 1.1.1.1 و 8.8.8.8.</li>
+            <li>تفعيل Secure DNS داخل Chrome.</li>
+          </ul>
+
+          <p>تغيير DNS للواجهات المتصلة:</p>
+
+          <pre><code>Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | ForEach-Object {
+    Set-DnsClientServerAddress -InterfaceAlias $_.Name -ServerAddresses "1.1.1.1","8.8.8.8"
+}
+
+ipconfig /flushdns
+Clear-DnsClientCache</code></pre>
+        </article>
+
+        <article id="diagnostics" class="support-article">
+          <h2>7. أوامر تشخيص مفيدة</h2>
+
+          <h3>فحص وجود البرنامج</h3>
+          <pre><code>Test-Path "F:\Trading\AM-Trading-Windows-x64\FinceptTerminal.exe"</code></pre>
+
+          <h3>تشغيل البرنامج من المسار الصحيح</h3>
+          <pre><code>cd F:\Trading\AM-Trading-Windows-x64
+.\FinceptTerminal.exe</code></pre>
+
+          <h3>فحص ملفات التطبيق المحلية</h3>
+          <pre><code>Get-ChildItem "$env:LOCALAPPDATA\com.fincept.terminal" -Recurse -Force -ErrorAction SilentlyContinue |
+  Select-Object FullName</code></pre>
+
+          <h3>فحص GitHub Pages</h3>
+          <pre><code>curl.exe -I "https://sanaa-wq.github.io/AM-Trading/"</code></pre>
+        </article>
+
+        <article class="support-article final-help">
+          <h2>لم تجد الحل؟</h2>
+          <p>
+            افتح بلاغًا في GitHub Issues، وضع صورة الخطأ، وناتج PowerShell، واسم نسخة Windows التي تستخدمها.
+          </p>
+
+          <a class="btn btn-primary" href="https://github.com/sanaa-wq/AM-Trading/issues" target="_blank" rel="noopener">
+            فتح صفحة البلاغات
+          </a>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <p>© <span id="year"></span> AM-Trading. All rights reserved.</p>
+      <p>Support Center for installation, setup, and diagnostics.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
